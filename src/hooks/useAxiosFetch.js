@@ -10,10 +10,10 @@ const useAxiosFetch = (dataUrl) => {
     let isMounted = true;
     const source = axios.CancelToken.source();
 
-    const fetchData = async (url) => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get(url, {
+        const response = await axios.get(dataUrl, {
           cancelToken: source.token,
         });
         if (isMounted) {
@@ -22,23 +22,28 @@ const useAxiosFetch = (dataUrl) => {
         }
       } catch (err) {
         if (isMounted) {
-          setFetchError(err.message);
-          setData([]);
+          if (axios.isCancel(err)) {
+          } else {
+            setFetchError(err.message);
+            setData([]);
+          }
         }
       } finally {
-        isMounted && setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    fetchData(dataUrl);
+    if (dataUrl) {
+      fetchData();
+    } else {
+    }
 
-    const cleanUp = () => {
-      console.log("clean up function");
+    return () => {
       isMounted = false;
-      source.cancel();
+      source.cancel("Component unmounted");
     };
-
-    return cleanUp;
   }, [dataUrl]);
 
   return { data, fetchError, isLoading };

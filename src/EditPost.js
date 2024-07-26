@@ -1,17 +1,21 @@
-import { useEffect, useContext, useState } from "react";
+import { useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import DataContext from "./context/DataContext";
+import { useStoreState, useStoreActions } from "easy-peasy";
 import { format } from "date-fns";
-import api from "./api/posts";
 
 const EditPost = () => {
-  const [editTitle, setEditTitle] = useState("");
-  const [editBody, setEditBody] = useState("");
-  const { posts, setPosts } =
-    useContext(DataContext);
   const { id } = useParams();
-  const post = posts.find((post) => post.id.toString() === id);
   const navigate = useNavigate();
+
+  const editTitle = useStoreState((state) => state.editTitle);
+  const editBody = useStoreState((state) => state.editBody);
+
+  const editPost = useStoreActions((actions) => actions.editPost);
+  const setEditTitle = useStoreActions((actions) => actions.setEditTitle);
+  const setEditBody = useStoreActions((actions) => actions.setEditBody);
+
+  const getPostsById = useStoreState((state) => state.getPostsById);
+  const post = getPostsById(id);
 
   useEffect(() => {
     if (post) {
@@ -20,20 +24,12 @@ const EditPost = () => {
     }
   }, [post, setEditTitle, setEditBody]);
 
-  const handleEdit = async (id) => {
+  const handleEdit = (e) => {
+    e.preventDefault();
     const datetime = format(new Date(), "MMMM dd, yyyy pp");
-    const updatedPost = { id, title: editTitle, datetime, body: editBody };
-    try {
-      const response = await api.put(`/posts/${id}`, updatedPost);
-      setPosts(
-        posts.map((post) => (post.id === id ? { ...response.data } : post))
-      );
-      setEditTitle("");
-      setEditBody("");
-      navigate("/");
-    } catch (err) {
-      console.log(`Error: ${err.message}`);
-    }
+    const updatedPost = { id: +id, title: editTitle, datetime, body: editBody };
+    editPost(updatedPost);
+    navigate(`/post/${id}`);
   };
 
   return (
@@ -41,7 +37,7 @@ const EditPost = () => {
       {editTitle && (
         <>
           <h2>Edit Post</h2>
-          <form className="newPostForm" onSubmit={(e) => e.preventDefault()}>
+          <form className="newPostForm" onSubmit={handleEdit}>
             <label htmlFor="postTitle">Title:</label>
             <input
               type="text"
@@ -53,14 +49,12 @@ const EditPost = () => {
             />
             <label htmlFor="postBody">Post:</label>
             <textarea
-              id="postTitle"
+              id="postBody"
               required
               value={editBody}
               onChange={(e) => setEditBody(e.target.value)}
             ></textarea>
-            <button type="submit" onClick={() => handleEdit(post.id)}>
-              Submit
-            </button>
+            <button type="submit">Submit</button>
           </form>
         </>
       )}
